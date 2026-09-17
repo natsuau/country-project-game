@@ -13,7 +13,12 @@
       <p class="hint">矢印キー / WASD、または画面のボタンで歩けます</p>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"></script>
+    <script>
+      window.addEventListener('error', (event) => {
+        console.error('Game error:', event.error || event.message);
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
     <script src="./src/main.js"></script>
     <script src="./src/app-shell.js"></script>
   </body>
