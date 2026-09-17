@@ -1,0 +1,15 @@
+[
+  { "id": "learning", "label": "学び", "signals": ["education", "schoolAccess", "basicLearning"] },
+  { "id": "research", "label": "研究", "signals": ["researchInvestment", "researchFacilities", "researchPower"] },
+  { "id": "invention", "label": "発明", "signals": ["innovationEvents", "researchPower", "technology"] },
+  { "id": "nature", "label": "自然", "signals": ["environment", "waterQuality", "forest"] },
+  { "id": "forest", "label": "森", "signals": ["forestProtection", "reforestation", "forest"] },
+  { "id": "waterside", "label": "水辺", "signals": ["waterQuality", "watersideUse"] },
+  { "id": "tourism", "label": "観光", "signals": ["tourists", "lodging", "shops", "culture"] },
+  { "id": "manufacturing", "label": "ものづくり", "signals": ["factories", "manufacturing", "practicalSkill"] },
+  { "id": "leisure", "label": "ゆとり", "signals": ["shortWorkHours", "holidays", "freeTime"] },
+  { "id": "liveliness", "label": "にぎわい", "signals": ["shops", "leisure", "footTraffic"] },
+  { "id": "mutualAid", "label": "助け合い", "signals": ["helpEvents", "recoverySupport"] },
+  { "id": "technology", "label": "技術", "signals": ["automation", "digitalServices", "technology"] },
+  { "id": "hardworking", "label": "働き者", "signals": ["longWorkHours", "employment", "production"] }
+]
