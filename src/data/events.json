@@ -1,0 +1,26 @@
+[
+  {
+    "id": "river_birds_return",
+    "tier": "small",
+    "title": "鳥が戻ってきた",
+    "conditions": { "environmentMin": 78 },
+    "effects": { "tourism": 1 },
+    "historyText": "川辺に鳥が戻り、散歩する住民が増えた。"
+  },
+  {
+    "id": "school_research_group",
+    "tier": "medium",
+    "title": "小さな研究会",
+    "conditions": { "educationMin": 55 },
+    "effects": { "technology": 1 },
+    "historyText": "学校の活動から小さな研究会が生まれた。"
+  },
+  {
+    "id": "flood_risk",
+    "tier": "large",
+    "title": "大雨と川",
+    "conditions": { "environmentMax": 35 },
+    "effects": { "money": -12, "population": -1 },
+    "historyText": "大雨で川があふれ、町は復旧に時間を使った。"
+  }
+]
