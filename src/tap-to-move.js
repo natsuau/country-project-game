@@ -1,131 +1,130 @@
 (() => {
-  function waitForScene() {
+  function boot() {
     const game = window.Phaser && Phaser.GAMES && Phaser.GAMES[0];
-    if (!game) return setTimeout(waitForScene, 250);
+    const canvas = document.querySelector('#game canvas');
+    if (!game || !canvas) return setTimeout(boot, 250);
 
     let scene;
     try { scene = game.scene.getScene('country'); } catch (_) {}
-    if (!scene || !scene.player || !scene.residents || !scene.update) {
-      return setTimeout(waitForScene, 250);
+    if (!scene || !scene.player || !scene.residents || !scene.cameras?.main) {
+      return setTimeout(boot, 250);
     }
-    if (scene.__tapMoveInstalled) return;
-    scene.__tapMoveInstalled = true;
+    if (window.__countryTapMoveInstalled) return;
+    window.__countryTapMoveInstalled = true;
 
-    let target = null;
-    let targetResident = null;
+    canvas.style.touchAction = 'none';
+    canvas.style.webkitUserSelect = 'none';
+
+    let activeToken = 0;
     let marker = null;
 
-    function clearTarget() {
-      target = null;
-      targetResident = null;
-      if (marker) marker.setVisible(false);
-    }
-
-    function setTarget(x, y, resident = null) {
-      if (scene.dialogueOpen || scene.policyOpen || scene.historyOpen || scene.buildMode) return;
-      target = {
-        x: Phaser.Math.Clamp(x, 35, 1565),
-        y: Phaser.Math.Clamp(y, 35, 965)
-      };
-      targetResident = resident;
+    function showMarker(x, y) {
       if (!marker) {
-        marker = scene.add.circle(target.x, target.y, 10, 0xffffff, 0.50)
-          .setStrokeStyle(3, 0x68806e, 0.8)
-          .setDepth(7);
+        marker = scene.add.circle(x, y, 11, 0xffffff, 0.5)
+          .setStrokeStyle(3, 0x667f6d, 0.85)
+          .setDepth(6);
       }
-      marker.setPosition(target.x, target.y).setScale(1).setAlpha(1).setVisible(true);
-      scene.tweens.add({
-        targets: marker,
-        scale: 1.55,
-        alpha: 0.15,
-        duration: 380,
-        yoyo: true
-      });
+      marker.setPosition(x, y).setVisible(true).setAlpha(1).setScale(1);
+      scene.tweens.add({ targets: marker, scale: 1.5, alpha: 0.2, duration: 320, yoyo: true });
     }
 
-    // Make residents easier to tap on a phone.
-    scene.residents.forEach(resident => {
-      resident.setInteractive(new Phaser.Geom.Circle(0, 0, 42), Phaser.Geom.Circle.Contains);
-    });
+    function screenToWorld(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = (clientX - rect.left) * (scene.scale.width / rect.width);
+      const sy = (clientY - rect.top) * (scene.scale.height / rect.height);
+      return scene.cameras.main.getWorldPoint(sx, sy);
+    }
 
-    scene.input.on('pointerdown', pointer => {
-      if (scene.dialogueOpen || scene.policyOpen || scene.historyOpen || scene.buildMode) return;
-
-      const world = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-
-      // If the tap is close to a resident, treat it as "talk to this person".
-      let nearest = null;
-      let nearestDistance = 99999;
-      scene.residents.forEach(resident => {
-        const d = Phaser.Math.Distance.Between(world.x, world.y, resident.x, resident.y);
-        if (d < 70 && d < nearestDistance) {
-          nearest = resident;
-          nearestDistance = d;
+    function nearestResident(world, maxDistance = 85) {
+      let best = null;
+      let bestD = maxDistance;
+      scene.residents.forEach(r => {
+        const d = Phaser.Math.Distance.Between(world.x, world.y, r.x, r.y);
+        if (d < bestD) {
+          best = r;
+          bestD = d;
         }
       });
+      return best;
+    }
 
-      if (nearest) {
-        const data = nearest.residentData || {};
-        setTarget(nearest.x, nearest.y + 58, nearest);
-        if (scene.showNotice) scene.showNotice(`${data.name || '住民'}のところへ向かいます`);
-        return;
-      }
+    function animateTo(x, y, resident = null) {
+      activeToken += 1;
+      const token = activeToken;
+      x = Phaser.Math.Clamp(x, 35, 1565);
+      y = Phaser.Math.Clamp(y, 35, 965);
+      showMarker(x, y);
 
-      setTarget(world.x, world.y, null);
-    });
+      const speed = 230;
+      let last = performance.now();
 
-    // Wrap the scene's own update so our movement runs AFTER the original code.
-    // That prevents the original update from resetting velocity back to zero.
-    const originalUpdate = scene.update.bind(scene);
-    scene.update = function(time, delta) {
-      originalUpdate(time, delta);
+      function step(now) {
+        if (token !== activeToken) return;
+        if (!scene.player || scene.dialogueOpen || scene.policyOpen || scene.historyOpen || scene.buildMode) return;
 
-      if (!target || !scene.player) return;
+        const px = scene.player.x;
+        const py = scene.player.y;
+        const targetX = resident ? resident.x : x;
+        const targetY = resident ? resident.y + 58 : y;
+        const dx = targetX - px;
+        const dy = targetY - py;
+        const dist = Math.hypot(dx, dy);
 
-      if (scene.dialogueOpen || scene.policyOpen || scene.historyOpen || scene.buildMode) {
-        scene.player.setVelocity(0, 0);
-        return;
-      }
-
-      const manual = scene.cursors?.left?.isDown || scene.cursors?.right?.isDown ||
-        scene.cursors?.up?.isDown || scene.cursors?.down?.isDown ||
-        scene.keys?.A?.isDown || scene.keys?.D?.isDown || scene.keys?.W?.isDown || scene.keys?.S?.isDown ||
-        scene.touchState?.left || scene.touchState?.right || scene.touchState?.up || scene.touchState?.down;
-
-      if (manual) {
-        clearTarget();
-        return;
-      }
-
-      if (targetResident) {
-        const dResident = Phaser.Math.Distance.Between(
-          scene.player.x,
-          scene.player.y,
-          targetResident.x,
-          targetResident.y
-        );
-
-        if (dResident <= 84) {
-          const resident = targetResident;
-          scene.player.setVelocity(0, 0);
-          clearTarget();
-          if (!scene.dialogueOpen && scene.openDialogue) scene.openDialogue(resident);
+        if ((resident && dist <= 82) || (!resident && dist <= 10)) {
+          scene.player.setVelocity?.(0, 0);
+          if (marker) marker.setVisible(false);
+          if (resident && !scene.dialogueOpen && scene.openDialogue) {
+            scene.openDialogue(resident);
+          }
           return;
         }
+
+        const dt = Math.min((now - last) / 1000, 0.04);
+        last = now;
+        const move = Math.min(speed * dt, dist);
+        const nx = px + (dx / dist) * move;
+        const ny = py + (dy / dist) * move;
+
+        scene.player.setVelocity?.(0, 0);
+        if (scene.player.body?.reset) {
+          scene.player.body.reset(nx, ny);
+        } else {
+          scene.player.setPosition(nx, ny);
+        }
+        requestAnimationFrame(step);
       }
 
-      const d = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, target.x, target.y);
-      if (d <= 14) {
-        scene.player.setVelocity(0, 0);
-        clearTarget();
-        return;
+      requestAnimationFrame(step);
+    }
+
+    function handleTap(clientX, clientY) {
+      if (scene.dialogueOpen || scene.policyOpen || scene.historyOpen || scene.buildMode) return;
+      const world = screenToWorld(clientX, clientY);
+      const resident = nearestResident(world);
+      if (resident) {
+        const name = resident.residentData?.name || '住民';
+        scene.showNotice?.(`${name}のところへ向かいます`);
+        animateTo(resident.x, resident.y + 58, resident);
+      } else {
+        animateTo(world.x, world.y, null);
       }
+    }
 
-      scene.physics.moveTo(scene.player, target.x, target.y, scene.speed || 190);
-    };
+    canvas.addEventListener('pointerup', e => {
+      e.preventDefault();
+      handleTap(e.clientX, e.clientY);
+    }, { passive: false });
 
-    if (scene.showNotice) scene.showNotice('地面や住民をタップして移動できます');
+    canvas.addEventListener('touchend', e => {
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      e.preventDefault();
+      handleTap(t.clientX, t.clientY);
+    }, { passive: false });
+
+    scene.showNotice?.('地面をタップで移動・住民をタップで会話できます');
   }
 
-  window.addEventListener('load', waitForScene);
+  if (document.readyState === 'complete') boot();
+  else window.addEventListener('load', boot);
 })();
